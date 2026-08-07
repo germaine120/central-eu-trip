@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="旅行助手" />
+  <title>旅行助手 · Trip Planner</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Helvetica Neue"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            accent: { DEFAULT: '#007AFF', dark: '#0A84FF' },
+          },
+          boxShadow: {
+            card: '0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    html, body { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+    body { background: #f2f2f7; }
+    @media (prefers-color-scheme: dark) { body { background: #000000; } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .tabbar-pad { padding-bottom: calc(env(safe-area-inset-bottom) + 76px); }
+  </style>
+
+  <script>
+    // ===== 占位默认数据（首次打开不空白；真实数据请到「设置」导入 trip-data.json）=====
+    const DEFAULT_DATA = {
+      meta: { title: "中欧 12 日示例行程", start: "2026-09-23", end: "2026-10-04" },
+      rates: { EUR: 7.78, CZK: 0.32, HUF: 0.0213 },
+      accounting: [],
+      checklist: [
+        { id: "pre1", priority: "P0", text_zh: "确认机票与酒店订单（名字拼写、入住日期与签证一致）", text_en: "Verify flight & hotel bookings match visa", done: false },
+        { id: "pre2", priority: "P0", text_zh: "激活 / 购买境外流量卡或 eSIM（欧洲多国通用、含通话）", text_en: "Activate EU eSIM / data SIM with calls", done: false },
+        { id: "pre3", priority: "P0", text_zh: "开通外币信用卡与准备现金（Visa/Master 免手续费、少量欧元）", text_en: "Enable intl credit card & get EUR cash", done: false },
+        { id: "c1", priority: "P1", text_zh: "护照有效期 > 6 个月", text_en: "Passport valid > 6 months", done: false },
+        { id: "c2", priority: "P1", text_zh: "申根签证", text_en: "Schengen visa", done: false },
+        { id: "c3", priority: "P2", text_zh: "欧元现金 EUR", text_en: "EUR cash", done: false },
+        { id: "c4", priority: "P2", text_zh: "信用卡境外开通", text_en: "Intl card enabled", done: false },
+        { id: "c5", priority: "P3", text_zh: "欧标转换插头", text_en: "EU power adapter", done: false },
+        { id: "c6", priority: "P3", text_zh: "常用药品", text_en: "Meds & first-aid", done: false }
+      ],
+      itinerary: [
+        {
+          date: "2026-09-23", day_zh: "9月23日", day_en: "Sep 23", weekday_zh: "周三",
+          city_zh: "慕尼黑 ➡️ 布拉格", city_en: "Munich ➡️ Prague",
+          route_zh: "机场接驳 + 入境大巴", route_en: "Airport transfer + entry bus",
+          sights: [
+            { name_zh: "玛利亚广场散步", name_en: "Marienplatz stroll", map: "Marienplatz Munich" },
+            { name_zh: "查理大桥 晚霞", name_en: "Charles Bridge sunset", map: "Charles Bridge" }
+          ],
+          food: [
+            { name_zh: "外场摊位：巴伐利亚烤鱼", name_en: "Beer tent: Bavarian fish" },
+            { name_zh: "Rischart 苹果卷", name_en: "Rischart apple strudel" }
+          ],
+          transport_zh: "机场快线 S-Bahn + RegioJet 直达大巴", transport_en: "S-Bahn + RegioJet bus",
+          accommodation: { name_zh: "示例酒店", name_en: "Sample Hotel", map: "Prague" },
+          planB_zh: "大巴延误 → 改 FlixBus 或夜间车次", planB_en: "Bus delay → FlixBus / night coach"
+        },
+        {
+          date: "2026-09-24", day_zh: "9月24日", day_en: "Sep 24", weekday_zh: "周四",
+          city_zh: "布拉格 Prague", city_en: "Prague, Czechia",
+          route_zh: "老城深度漫步", route_en: "Old Town stroll",
+          sights: [
+            { name_zh: "老城广场", name_en: "Old Town Square", map: "Old Town Square Prague" },
+            { name_zh: "天文钟整点报时", name_en: "Astronomical Clock", map: "Prague Astronomical Clock" }
+          ],
+          food: [ { name_zh: "Mlejnice 烤猪肘", name_en: "Mlejnice pork knuckle" } ],
+          transport_zh: "全天步行或有轨电车", transport_en: "Walk or tram",
+          accommodation: { name_zh: "示例酒店", name_en: "Sample Hotel", map: "Prague" },
+          planB_zh: "雨天 → 改去美术馆 / 咖啡馆", planB_en: "Rain → museum or café"
+        },
+        {
+          date: "2026-09-25", day_zh: "9月25日", day_en: "Sep 25", weekday_zh: "周五",
+          city_zh: "维也纳 Vienna", city_en: "Vienna, Austria",
+          route_zh: "美泉宫 + 音乐会", route_en: "Schönbrunn + Concert",
+          sights: [
+            { name_zh: "美泉宫", name_en: "Schönbrunn Palace", map: "Schönbrunn Palace" },
+            { name_zh: "金色大厅", name_en: "Musikverein", map: "Musikverein" }
+          ],
+          food: [ { name_zh: "Figlmüller 炸猪排", name_en: "Figlmüller schnitzel" } ],
+          transport_zh: "地铁 / 电车", transport_en: "U-Bahn / tram",
+          transports: [
+            { type: "flight", depart: "08:00", arrive: "12:30", from: "上海 SHA", to: "维也纳 VIE", detail: "示例航班 · Demo CA123" }
+          ],
+          accommodation: { name_zh: "示例民宿", name_en: "Sample Airbnb", map: "Vienna" },
+          planB_zh: "音乐会售罄 → 改国家歌剧院", planB_en: "Concert sold out → Staatsoper"
+        }
+      ],
+      bookings: {
+        P1: { title_zh: '拿签后立即锁定（1-2 天内）', title_en: 'Lock immediately after visa', items: [
+          { id: 'b-p1-1', name_zh: '匈牙利国会大厦内部导览', name_en: 'Parliament Tour', date: '2026-10-01', why_zh: '中/英文导览名额极少，提前 1-2 月开放，现场极难买散客票', channel_zh: 'jegymester.hu', done: false },
+          { id: 'b-p1-2', name_zh: '夏夫堡蒸汽小火车', name_en: 'Schafbergbahn', date: '2026-09-27', why_zh: '小火车运力有限、班次固定，现场排队易错过理想班次', channel_zh: '5schafe.at', done: false },
+          { id: 'b-p1-3', name_zh: 'CK 小镇洞穴餐厅', name_en: 'CK cave restaurant', date: '2026-09-26', why_zh: '炭火烤肉位极少，需提前 1-2 月预订', channel_zh: '邮件 / 官网', done: false },
+          { id: 'b-p1-4', name_zh: '布达佩斯 New York Cafe', name_en: 'New York Cafe', date: '2026-10-01', why_zh: '“世界最美咖啡馆”，无预约排队常 1 小时起', channel_zh: '官网预约', done: false },
+        ] },
+        P2: { title_zh: '拿签后 3 天内锁定（交通与高品质体验）', title_en: 'Lock within 3 days', items: [
+          { id: 'b-p2-1', name_zh: '慕尼黑 ➡️ 布拉格 RegioJet 大巴', name_en: 'Munich ➡️ Prague RegioJet', date: '2026-09-23', why_zh: '提前选舒适座位', channel_zh: 'RegioJet', done: false },
+          { id: 'b-p2-2', name_zh: '布拉格 ➡️ CK 大巴', name_en: 'Prague ➡️ CK bus', date: '2026-09-26', why_zh: '性价比最高，提前买票', channel_zh: 'RegioJet / Student Agency', done: false },
+          { id: 'b-p2-3', name_zh: 'CK ➡️ 巴德伊舍 CK Shuttle', name_en: 'CK ➡️ Bad Ischl Shuttle', date: '2026-09-27', why_zh: '行李最多、转车最繁琐，提前提交点对点接送', channel_zh: 'CK Shuttle 官网', done: false },
+          { id: 'b-p2-4', name_zh: '萨尔茨堡 ➡️ 布达佩斯 Railjet', name_en: 'Salzburg ➡️ Budapest Railjet', date: '2026-09-30', why_zh: '早订便宜、选一等座、付费选座', channel_zh: 'ÖBB', done: false },
+          { id: 'b-p2-5', name_zh: '布达佩斯 ➡️ 维也纳 Railjet', name_en: 'Budapest ➡️ Vienna Railjet', date: '2026-10-02', why_zh: '早订便宜、选一等座、付费选座', channel_zh: 'ÖBB', done: false },
+          { id: 'b-p2-6', name_zh: '维也纳金色大厅音乐会', name_en: 'Musikverein', date: '2026-10-03', why_zh: '提前订可选 B/C 区黄金视听位', channel_zh: 'musikverein.at', done: false },
+        ] },
+        P3: { title_zh: '出行前 2-3 周预订（热门老字号餐饮）', title_en: 'Book 2-3 weeks before', items: [
+          { id: 'b-p3-1', name_zh: '维也纳 Figlmüller 炸猪排', name_en: 'Figlmüller', date: '2026-10-03', why_zh: '提前订免排队，优先 Bäckerstraße 店', channel_zh: '官网预订', done: false },
+          { id: 'b-p3-2', name_zh: '维也纳 Café Sacher', name_en: 'Café Sacher', date: '2026-10-02', why_zh: '官网预约通道绕开长龙', channel_zh: '官网预订', done: false },
+          { id: 'b-p3-3', name_zh: '萨尔茨堡 St. Peter 地窖餐厅', name_en: 'St. Peter', date: '2026-09-29', why_zh: '欧洲最古老餐厅，提前 2-3 周订晚餐', channel_zh: '官网预订', done: false },
+          { id: 'b-p3-4', name_zh: '布拉格 Mlejnice 烤猪肘', name_en: 'Mlejnice', date: '2026-09-24', why_zh: '提前 1-2 周预订免排队', channel_zh: '官网 / 邮件', done: false },
+        ] },
+        P4: { title_zh: '机动调整 / 提前 1-3 天或现场购买', title_en: 'Flexible', items: [
+          { id: 'b-p4-1', name_zh: 'Strobl 湖区滑道', name_en: 'Alpine Coaster', date: '2026-09-28', why_zh: '受天气影响，雨天暂停，与夏夫堡灵活对调，现场购票', channel_zh: '现场购票', done: false },
+          { id: 'b-p4-2', name_zh: '布达佩斯多瑙河夜游船', name_en: 'Danube Cruise', date: '2026-09-30', why_zh: '提前 2-3 天看天气订黄金夜景班次', channel_zh: 'GetYourGuide', done: false },
+          { id: 'b-p4-3', name_zh: '美泉宫 Grand Tour', name_en: 'Schönbrunn', date: '2026-10-03', why_zh: '提前 1-2 天买指定时段电子票', channel_zh: '美泉宫官网', done: false },
+          { id: 'b-p4-4', name_zh: 'CAT 维也纳机场快线', name_en: 'Vienna CAT', date: '2026-10-04', why_zh: '现场或提前 1 天购买', channel_zh: '官网 / 现场', done: false },
+        ] },
+      },
+      tickets: [
+        { id: 't1', date: '2026-09-23', category: '机票', title_zh: '上海 ➡️ 慕尼黑 CA827', title_en: 'PVG ➡️ MUC', file: 'tickets/flight-pvg-muc.pdf', note: '浦东T2 → 慕尼黑T2' },
+        { id: 't2', date: '2026-09-30', category: '火车', title_zh: '萨尔茨堡 ➡️ 布达佩斯 Railjet', title_en: 'Salzburg ➡️ Budapest', file: 'tickets/train-salzburg-budapest.pdf', note: '一等座' },
+        { id: 't3', date: '2026-10-02', category: '火车', title_zh: '布达佩斯 ➡️ 维也纳 Railjet', title_en: 'Budapest ➡️ Vienna', file: 'tickets/train-budapest-vienna.pdf', note: '二等座' },
+        { id: 't4', date: '2026-10-04', category: '机票', title_zh: '维也纳 ➡️ 上海 OS015', title_en: 'VIE ➡️ PVG', file: 'tickets/flight-vie-pvg.pdf', note: '维也纳T3 → 上海T2' },
+        { id: 't5', date: '2026-09-23', category: '酒店', title_zh: '布拉格罗特酒店', title_en: 'Hotel Rot', file: 'tickets/hotel-rot.pdf', note: '9.23-9.26' },
+        { id: 't6', date: '2026-09-27', category: '酒店', title_zh: '巴德伊舍 Sonnhof', title_en: 'Sonnhof', file: 'tickets/hotel-sonnhof.pdf', note: '9.27-9.29' },
+        { id: 't7', date: '2026-09-29', category: '酒店', title_zh: '萨尔茨堡 Arte', title_en: 'Arte Salzburg', file: 'tickets/hotel-arte.pdf', note: '9.29-9.30' },
+        { id: 't8', date: '2026-10-02', category: '酒店', title_zh: '维也纳民宿 Arsenalstrasse 8', title_en: 'Vienna Airbnb', file: 'tickets/hotel-vienna.pdf', note: '10.2-10.4' },
+        { id: 't9', date: '2026-09-27', category: '门票', title_zh: '夏夫堡小火车', title_en: 'Schafbergbahn', file: 'tickets/schafbergbahn.pdf', note: '' },
+        { id: 't10', date: '2026-10-01', category: '门票', title_zh: '国会大厦导览', title_en: 'Parliament', file: 'tickets/parliament.pdf', note: '' },
+        { id: 't11', date: '2026-10-03', category: '门票', title_zh: '金色大厅音乐会', title_en: 'Musikverein', file: 'tickets/musikverein.pdf', note: '' },
+      ],
+    };
+  </script>
+</head>
+
+<body class="font-sans text-gray-900 dark:text-gray-100 antialiased" x-data="app()" x-cloak>
+
+  <!-- 顶部标题栏 -->
+  <header class="sticky top-0 z-20 px-5 pt-[max(env(safe-area-inset-top),12px)] pb-3
+                 bg-[#f2f2f7]/85 dark:bg-black/70 backdrop-blur-xl border-b border-black/5 dark:border-white/10">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-[20px] font-semibold tracking-tight" x-text="data.meta.title"></h1>
+        <p class="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5"
+           x-text="data.meta.start + ' → ' + data.meta.end"></p>
+      </div>
+      <button @click="tab='settings'"
+              class="w-9 h-9 rounded-full bg-white/70 dark:bg-white/10 flex items-center justify-center text-[18px]
+                     active:scale-90 transition shadow-sm">⚙️</button>
+    </div>
+  </header>
+
+  <main class="px-4 tabbar-pad">
+
+    <!-- ===================== Tab 1: Checklist ===================== -->
+    <section x-show="tab==='checklist'" x-transition.opacity>
+      <!-- 进度条 -->
+      <div class="mt-4 mb-5">
+        <div class="flex items-end justify-between mb-2">
+          <span class="text-[13px] font-medium text-gray-500 dark:text-gray-400">总体完成度 · Progress</span>
+          <span class="text-[15px] font-semibold text-accent dark:text-accent-dark" x-text="progress + '%'"></span>
+        </div>
+        <div class="h-2.5 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+          <div class="h-full rounded-full bg-gradient-to-r from-accent to-sky-400 dark:from-accent-dark dark:to-sky-400
+                      transition-all duration-700 ease-out"
+               :style="`width:${progress}%`"></div>
+        </div>
+      </div>
+
+      <template x-for="grp in groupedChecklist" :key="grp.priority">
+        <div class="mb-5">
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="text-[12px] font-bold px-2 py-0.5 rounded-md"
+                  :class="{
+                    'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300': grp.priority==='P1',
+                    'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300': grp.priority==='P2',
+                    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300': grp.priority==='P3'
+                  }" x-text="grp.priority"></span>
+            <span class="text-[13px] text-gray-400 dark:text-gray-500">优先级</span>
+          </div>
+          <div class="space-y-2.5">
+            <template x-for="item in grp.items" :key="item.id">
+              <button @click="toggle(item)"
+                      class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-[#1c1c1e]
+                             shadow-card active:scale-[0.99] transition text-left">
+                <span class="shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition"
+                      :class="item.done ? 'bg-accent border-accent dark:bg-accent-dark dark:border-accent-dark' : 'border-gray-300 dark:border-gray-600'">
+                  <svg x-show="item.done" class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <span class="flex-1">
+                  <span class="block text-[15px] leading-snug" :class="item.done ? 'line-through text-gray-400 dark:text-gray-500' : ''" x-text="item.text_zh"></span>
+                  <span class="block text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="item.text_en"></span>
+                </span>
+              </button>
+            </template>
+          </div>
+        </div>
+      </template>
+    </section>
+
+    <!-- ===================== Tab 2: Itinerary ===================== -->
+    <section x-show="tab==='itinerary'" x-transition.opacity>
+      <!-- 日期横向选择 -->
+      <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 py-4 mt-1">
+        <template x-for="(d, i) in data.itinerary" :key="d.date">
+          <button @click="activeDate = i"
+                  class="shrink-0 px-3.5 py-2 rounded-2xl text-center transition active:scale-95"
+                  :class="activeDate===i ? 'bg-accent dark:bg-accent-dark text-white shadow-card' : 'bg-white dark:bg-[#1c1c1e] text-gray-700 dark:text-gray-200 shadow-sm'">
+            <div class="text-[13px] font-semibold leading-tight" x-text="d.day_zh"></div>
+            <div class="text-[10px] opacity-80 mt-0.5" x-text="d.weekday_zh"></div>
+          </button>
+        </template>
+      </div>
+
+      <!-- 当日卡片 -->
+      <template x-if="activeDay">
+        <div class="space-y-4 pb-2">
+          <!-- 城市/路线 -->
+          <div class="px-5 py-4 rounded-3xl bg-gradient-to-br from-accent to-sky-500 dark:from-accent-dark dark:to-sky-600 text-white shadow-card">
+            <div class="text-[11px] uppercase tracking-wider opacity-80 mb-1">城市 / 路线 · City / Route</div>
+            <div class="text-[20px] font-semibold leading-tight" x-text="activeDay.city_zh"></div>
+            <div class="text-[13px] opacity-90 mt-0.5" x-text="activeDay.city_en"></div>
+            <div class="mt-2 inline-flex items-center gap-1 text-[12px] bg-white/20 rounded-full px-3 py-1" x-text="activeDay.route_zh + ' · ' + activeDay.route_en"></div>
+          </div>
+
+          <!-- 核心景点 -->
+          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-3">核心景点 · Sights</div>
+            <div class="space-y-2.5">
+              <template x-for="s in activeDay.sights" :key="s.name_en">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex-1">
+                    <div class="text-[15px]" x-text="s.name_zh"></div>
+                    <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="s.name_en"></div>
+                  </div>
+                  <a :href="mapUrl(s.map)" target="_blank" rel="noopener"
+                     class="shrink-0 w-9 h-9 rounded-full bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark flex items-center justify-center active:scale-90 transition" aria-label="地图">
+                    <svg class="w-4.5 h-4.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  </a>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- 推荐美食 -->
+          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-3">推荐美食 · Food</div>
+            <div class="space-y-2">
+              <template x-for="f in activeDay.food" :key="f.name_en">
+                <div>
+                  <div class="text-[15px]" x-text="f.name_zh"></div>
+                  <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="f.name_en"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- 交通接驳 -->
+          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-2">交通接驳 · Transport</div>
+            <div class="text-[14px] leading-relaxed" x-text="activeDay.transport_zh"></div>
+            <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-1" x-text="activeDay.transport_en"></div>
+          </div>
+
+          <!-- 交通时刻（机票/火车） -->
+          <template x-if="activeDay && activeDay.transports && activeDay.transports.length">
+            <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+              <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-3">交通时刻 · Transport</div>
+              <div class="space-y-3">
+                <template x-for="leg in activeDay.transports" :key="leg.detail">
+                  <div class="flex items-center gap-3">
+                    <div class="shrink-0 w-10 h-10 rounded-full bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark flex items-center justify-center text-[18px]" x-text="leg.type==='flight' ? '✈️' : '🚄'"></div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 text-[15px] font-semibold">
+                        <span x-text="leg.depart"></span>
+                        <span class="text-gray-400">→</span>
+                        <span x-text="leg.arrive"></span>
+                      </div>
+                      <div class="text-[13px] text-gray-600 dark:text-gray-300 mt-0.5" x-text="leg.from + ' → ' + leg.to"></div>
+                      <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="leg.detail"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- 住宿 -->
+          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-2">住宿 · Accommodation</div>
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex-1">
+                <div class="text-[15px]" x-text="activeDay.accommodation.name_zh"></div>
+                <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="activeDay.accommodation.name_en"></div>
+              </div>
+              <a :href="mapUrl(activeDay.accommodation.map)" target="_blank" rel="noopener"
+                 class="shrink-0 w-9 h-9 rounded-full bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark flex items-center justify-center active:scale-90 transition" aria-label="地图">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Plan B 应急预案（可折叠） -->
+          <div class="rounded-3xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 overflow-hidden">
+            <button @click="planBOpen = !planBOpen" class="w-full flex items-center justify-between px-5 py-3.5 text-left">
+              <span class="text-[14px] font-semibold text-amber-700 dark:text-amber-300">⚠️ Plan B 应急预案 · Emergency</span>
+              <svg class="w-4 h-4 text-amber-600 transition-transform" :class="planBOpen ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div x-show="planBOpen" x-transition.opacity class="px-5 pb-4 text-[13px] leading-relaxed text-amber-800 dark:text-amber-200/90">
+              <div x-text="activeDay.planB_zh"></div>
+              <div class="text-[11px] opacity-70 mt-1" x-text="activeDay.planB_en"></div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
+
+    <!-- ===================== Tab 3: Accounting ===================== -->
+    <section x-show="tab==='accounting'" x-transition.opacity>
+      <div class="mt-4 mb-4 px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-[13px] text-gray-500 dark:text-gray-400">当日</span>
+          <span class="text-[13px] font-medium px-2 py-0.5 rounded-md bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark" x-text="activeDay ? activeDay.day_zh : '—'"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="number" inputmode="decimal" x-model="amount" placeholder="0.00"
+                 class="flex-1 min-w-0 px-4 py-3 rounded-2xl bg-black/5 dark:bg-white/10 text-[16px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
+          <select x-model="currency"
+                  class="px-3 py-3 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark">
+            <option value="EUR">EUR €</option>
+            <option value="CZK">CZK Kč</option>
+            <option value="HUF">HUF Ft</option>
+          </select>
+        </div>
+        <input type="text" x-model="note" placeholder="备注（可选）"
+               class="w-full mt-2 px-4 py-3 rounded-2xl bg-black/5 dark:bg-white/10 text-[14px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
+        <button @click="addEntry()"
+                class="w-full mt-3 py-3 rounded-2xl bg-accent dark:bg-accent-dark text-white text-[15px] font-semibold active:scale-[0.98] transition shadow-card">＋ 添加记账 · Add</button>
+      </div>
+
+      <!-- 汇总 -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="px-4 py-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] shadow-card">
+          <div class="text-[11px] text-gray-400 dark:text-gray-500">当日支出</div>
+          <div class="text-[18px] font-semibold text-accent dark:text-accent-dark mt-0.5">¥<span x-text="dayTotal.toFixed(2)"></span></div>
+        </div>
+        <div class="px-4 py-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] shadow-card">
+          <div class="text-[11px] text-gray-400 dark:text-gray-500">总支出</div>
+          <div class="text-[18px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5">¥<span x-text="grandTotal.toFixed(2)"></span></div>
+        </div>
+      </div>
+
+      <!-- 列表 -->
+      <div class="space-y-2.5 pb-2">
+        <template x-for="e in data.accounting" :key="e.id">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="flex-1 min-w-0">
+              <div class="text-[14px] truncate" x-text="e.note || (e.amount + ' ' + e.currency)"></div>
+              <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                <span x-text="e.amount + ' ' + e.currency"></span> · <span x-text="e.cny.toFixed(2)"></span> CNY
+                · <span x-text="e.date"></span>
+              </div>
+            </div>
+            <button @click="removeEntry(e.id)" class="shrink-0 w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90 transition" aria-label="删除">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </template>
+        <template x-if="data.accounting.length === 0">
+          <div class="text-center text-[13px] text-gray-400 dark:text-gray-500 py-8">还没有记账 · No entries yet</div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ===================== Tab 4: 票夹 Tickets ===================== -->
+    <section x-show="tab==='tickets'" x-transition.opacity>
+      <!-- 日期横向选择 -->
+      <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 py-4 mt-1">
+        <template x-for="(d, i) in data.itinerary" :key="d.date">
+          <button @click="ticketDate = i"
+                  class="shrink-0 px-3.5 py-2 rounded-2xl text-center transition active:scale-95"
+                  :class="ticketDate===i ? 'bg-accent dark:bg-accent-dark text-white shadow-card' : 'bg-white dark:bg-[#1c1c1e] text-gray-700 dark:text-gray-200 shadow-sm'">
+            <div class="text-[13px] font-semibold leading-tight" x-text="d.day_zh"></div>
+            <div class="text-[10px] opacity-80 mt-0.5" x-text="d.weekday_zh"></div>
+          </button>
+        </template>
+      </div>
+
+      <template x-if="ticketDay">
+        <div class="space-y-4 pb-2">
+          <!-- 凭证 PDF -->
+          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500">凭证 PDF · Tickets</div>
+              <button @click="openTicketForm()" class="text-[12px] font-medium text-accent dark:text-accent-dark active:scale-95">＋ 新增</button>
+            </div>
+            <div class="space-y-2.5">
+              <template x-for="t in ticketsForDay" :key="t.id">
+                <div class="flex items-center gap-2.5">
+                  <div class="shrink-0 w-10 h-10 rounded-full bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark flex items-center justify-center text-[17px]" x-text="t.category==='机票'?'✈️':t.category==='火车'?'🚄':t.category==='酒店'?'🏨':t.category==='门票'?'🎟️':'📄'"></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[14px] font-semibold truncate" x-text="t.title_zh"></div>
+                    <div class="text-[11px] text-gray-400 dark:text-gray-500 truncate" x-text="(t.title_en||'') + (t.note ? ' · ' + t.note : '')"></div>
+                  </div>
+                  <a :href="t.file" target="_blank" rel="noopener"
+                     class="shrink-0 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 text-[12px] font-medium active:scale-90 transition">📂 打开</a>
+                  <button @click="openTicketForm(t)" class="shrink-0 w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-[14px] active:scale-90 transition" aria-label="编辑">✏️</button>
+                  <button @click="deleteTicket(t.id)" class="shrink-0 w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90 transition" aria-label="删除">🗑️</button>
+                </div>
+              </template>
+              <template x-if="ticketsForDay.length === 0">
+                <div class="text-[12px] text-gray-400 dark:text-gray-500 py-2">当天暂无凭证，点「＋ 新增」添加 PDF 路径</div>
+              </template>
+            </div>
+          </div>
+
+          <!-- 预订提醒 -->
+          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+            <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-3">预订提醒 · Bookings</div>
+            <div class="space-y-4">
+              <template x-for="grp in groupedBookings" :key="grp.priority">
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                          :class="{'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300':grp.priority==='P1','bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300':grp.priority==='P2','bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300':grp.priority==='P3','bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300':grp.priority==='P4'}"
+                          x-text="grp.priority"></span>
+                    <span class="text-[12px] text-gray-500 dark:text-gray-400" x-text="grp.title_zh"></span>
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="b in grp.items" :key="b.id">
+                      <button @click="toggleBooking(b)" class="w-full flex items-start gap-2.5 px-3 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/5 active:scale-[0.99] transition text-left">
+                        <span class="shrink-0 mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition"
+                              :class="b.done ? 'bg-accent border-accent dark:bg-accent-dark dark:border-accent-dark' : 'border-gray-300 dark:border-gray-600'">
+                          <svg x-show="b.done" class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                        <span class="flex-1 min-w-0">
+                          <span class="block text-[14px] leading-snug" :class="b.done ? 'line-through text-gray-400 dark:text-gray-500' : ''" x-text="b.name_zh"></span>
+                          <span class="block text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="(b.date ? b.date + ' · ' : '') + '📍 ' + b.channel_zh"></span>
+                        </span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 新增 / 编辑 票夹项 弹窗 -->
+      <div x-show="showTicketForm" x-transition.opacity class="fixed inset-0 z-40 bg-black/40 flex items-end sm:items-center justify-center" @click.self="showTicketForm=false" style="padding-bottom: env(safe-area-inset-bottom);">
+        <div class="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] overflow-y-auto">
+          <div class="text-[16px] font-semibold mb-4" x-text="editingTicket && editingTicket.id ? '编辑票夹项' : '新增票夹项'"></div>
+          <div class="space-y-3">
+            <div>
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">关联日期</label>
+              <select x-model="editingTicket.date" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark">
+                <option value="">（无 / 通用）</option>
+                <template x-for="d in data.itinerary" :key="d.date">
+                  <option :value="d.date" x-text="d.date + ' ' + d.day_zh"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">类别</label>
+              <select x-model="editingTicket.category" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark">
+                <option>机票</option><option>火车</option><option>酒店</option><option>门票</option><option>其他</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">标题（中文）</label>
+              <input x-model="editingTicket.title_zh" placeholder="如：布拉格罗特酒店" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
+            </div>
+            <div>
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">标题（英文）</label>
+              <input x-model="editingTicket.title_en" placeholder="Hotel Rot Prague" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
+            </div>
+            <div>
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">PDF 路径（相对 index.html）</label>
+              <div class="flex gap-2 mt-1">
+                <input x-model="editingTicket.file" placeholder="tickets/hotel-rot.pdf" class="flex-1 min-w-0 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[14px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
+                <label class="shrink-0 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[13px] active:scale-95 cursor-pointer">📁
+                  <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onTicketFile($event)" />
+                </label>
+              </div>
+              <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">把 PDF 放进 <span class="font-mono">tickets/</span> 文件夹，填 <span class="font-mono">tickets/文件名.pdf</span></p>
+            </div>
+            <div>
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">备注（可选）</label>
+              <input x-model="editingTicket.note" placeholder="如：9.23-9.26 标准双人房" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[14px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
+            </div>
+          </div>
+          <div class="flex gap-3 mt-5">
+            <button @click="showTicketForm=false" class="flex-1 py-3 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] font-medium active:scale-95 transition">取消</button>
+            <button @click="saveTicket()" class="flex-1 py-3 rounded-2xl bg-accent dark:bg-accent-dark text-white text-[15px] font-semibold active:scale-95 transition">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Tab 5: Settings ===================== -->
+    <section x-show="tab==='settings'" x-transition.opacity>
+      <div class="mt-4 space-y-4">
+        <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+          <div class="text-[14px] font-semibold mb-1">⚙️ 设置 / 数据 · Settings</div>
+          <div class="text-[12px] text-gray-400 dark:text-gray-500 leading-relaxed mb-4">所有数据保存在本机浏览器（localStorage）。导入 JSON 将覆盖当前数据。</div>
+
+          <label class="block w-full py-3 rounded-2xl bg-accent dark:bg-accent-dark text-white text-center text-[15px] font-semibold active:scale-[0.98] transition shadow-card cursor-pointer">
+            导入 JSON 数据 · Import
+            <input type="file" accept="application/json,.json" class="hidden" @change="importFile($event)" />
+          </label>
+
+          <button @click="exportFile()"
+                  class="w-full mt-3 py-3 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] font-semibold active:scale-[0.98] transition">
+            导出当前数据 · Export
+          </button>
+
+          <button @click="restoreDefault()"
+                  class="w-full mt-3 py-3 rounded-2xl text-[14px] text-gray-500 dark:text-gray-400 active:scale-[0.98] transition">
+            恢复示例默认数据 · Reset
+          </button>
+
+          <p class="mt-4 text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+            JSON 结构：<br />
+            { meta, rates:{EUR,CZK,HUF}, checklist:[{id,priority,text_zh,text_en,done}], itinerary:[{date,day_zh,day_en,weekday_zh,city_zh,city_en,route_zh,route_en,sights:[{name_zh,name_en,map}],food:[{name_zh,name_en}],transport_zh,transport_en,transports:[{type:'flight'|'train',depart,arrive,from,to,detail}],accommodation:{name_zh,name_en,map},planB_zh,planB_en}], accounting:[{id,amount,currency,cny,note,date}], bookings:{P1..P4:{title_zh,title_en,items:[{id,name_zh,name_en,date,why_zh,channel_zh,done}]}}, tickets:[{id,date,category:'机票'|'火车'|'酒店'|'门票'|'其他',title_zh,title_en,file:'tickets/xxx.pdf',note}], budget? }
+          </p>
+        </div>
+
+        <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">
+          提示：用 iPhone Safari 打开后，点「分享 → 添加到主屏幕」即可全屏使用。<br />
+          记账汇率：1 EUR = 7.78 / 1 CZK = 0.32 / 100 HUF = 2.13（CNY）。
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== 毛玻璃悬浮 Tab 栏 ===================== -->
+  <nav class="fixed bottom-0 inset-x-0 z-30
+              bg-white/80 dark:bg-black/70 backdrop-blur-xl border-t border-black/5 dark:border-white/10"
+       style="padding-bottom: env(safe-area-inset-bottom);">
+    <div class="flex items-center justify-around px-2 py-2 max-w-md mx-auto">
+      <template x-for="t in tabs" :key="t.id">
+        <button @click="tab = t.id"
+                class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-2xl transition active:scale-95"
+                :class="tab===t.id ? 'text-accent dark:text-accent-dark' : 'text-gray-400 dark:text-gray-500'">
+          <span class="text-[22px] leading-none" x-text="t.icon"></span>
+          <span class="text-[10px] font-medium" x-text="t.label"></span>
+        </button>
+      </template>
+    </div>
+  </nav>
+
+  <script>
+    function app() {
+      return {
+        tab: 'itinerary',
+        planBOpen: false,
+        amount: '', currency: 'EUR', note: '',
+        data: (() => {
+          try {
+            const saved = localStorage.getItem('euroTripData');
+            if (saved) return JSON.parse(saved);
+          } catch (e) {}
+          return JSON.parse(JSON.stringify(DEFAULT_DATA));
+        })(),
+        activeDate: 0,
+        ticketDate: 0,
+        showTicketForm: false,
+        editingTicket: null,
+
+        tabs: [
+          { id: 'checklist',  icon: '📋', label: '清单' },
+          { id: 'itinerary', icon: '🗓️', label: '行程' },
+          { id: 'accounting', icon: '💰', label: '记账' },
+          { id: 'tickets',   icon: '🎫', label: '票夹' },
+        ],
+
+        get activeDay() { return this.data.itinerary[this.activeDate] || null; },
+
+        get ticketDay() { return this.data.itinerary[this.ticketDate] || null; },
+        get ticketsForDay() {
+          const d = this.ticketDay ? this.ticketDay.date : null;
+          return (this.data.tickets || []).filter(t => t.date === d);
+        },
+        get groupedBookings() {
+          const order = ['P1', 'P2', 'P3', 'P4'];
+          const b = this.data.bookings || {};
+          return order.filter(p => b[p]).map(p => ({ priority: p, title_zh: b[p].title_zh, title_en: b[p].title_en, items: b[p].items || [] }));
+        },
+
+        get progress() {
+          const list = this.data.checklist || [];
+          if (!list.length) return 0;
+          const done = list.filter(i => i.done).length;
+          return Math.round((done / list.length) * 100);
+        },
+
+        get groupedChecklist() {
+          const order = ['P1', 'P2', 'P3'];
+          const groups = {};
+          (this.data.checklist || []).forEach(i => {
+            (groups[i.priority] = groups[i.priority] || []).push(i);
+          });
+          return order.filter(p => groups[p]).map(p => ({ priority: p, items: groups[p] }));
+        },
+
+        toggle(item) { item.done = !item.done; this.save(); },
+
+        // ===== 票夹 / 预订提醒 =====
+        toggleBooking(b) { b.done = !b.done; this.save(); },
+        openTicketForm(t) {
+          this.editingTicket = t
+            ? JSON.parse(JSON.stringify(t))
+            : { id: '', date: this.ticketDay ? this.ticketDay.date : '', category: '机票', title_zh: '', title_en: '', file: '', note: '' };
+          this.showTicketForm = true;
+        },
+        onTicketFile(e) {
+          const f = e.target.files[0];
+          if (f) this.editingTicket.file = 'tickets/' + f.name;
+        },
+        saveTicket() {
+          const t = this.editingTicket;
+          if (!t || !t.title_zh.trim() || !t.file.trim()) { alert('请填写标题与 PDF 路径'); return; }
+          if (!t.id) {
+            t.id = 't' + Date.now();
+            this.data.tickets = this.data.tickets || [];
+            this.data.tickets.push(t);
+          } else {
+            const i = (this.data.tickets || []).findIndex(x => x.id === t.id);
+            if (i >= 0) this.data.tickets[i] = t;
+          }
+          this.showTicketForm = false;
+          this.save();
+        },
+        deleteTicket(id) {
+          if (!confirm('确认删除该票夹项？')) return;
+          this.data.tickets = (this.data.tickets || []).filter(x => x.id !== id);
+          this.save();
+        },
+
+        save() { localStorage.setItem('euroTripData', JSON.stringify(this.data)); },
+
+        mapUrl(q) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q || ''); },
+
+        // ===== 记账 =====
+        get dayTotal() {
+          const d = this.activeDay ? this.activeDay.date : null;
+          return (this.data.accounting || [])
+            .filter(e => e.date === d)
+            .reduce((s, e) => s + (Number(e.cny) || 0), 0);
+        },
+        get grandTotal() {
+          return (this.data.accounting || [])
+            .reduce((s, e) => s + (Number(e.cny) || 0), 0);
+        },
+        rate(c) { return (this.data.rates && this.data.rates[c]) || 1; },
+        symbol(c) { return { EUR: '€', CZK: 'Kč', HUF: 'Ft' }[c] || ''; },
+        addEntry() {
+          const amt = parseFloat(this.amount);
+          if (!amt || amt <= 0 || !this.activeDay) return;
+          const cny = amt * this.rate(this.currency);
+          this.data.accounting.push({
+            id: 'a' + Date.now(),
+            amount: amt,
+            currency: this.currency,
+            cny: Math.round(cny * 100) / 100,
+            note: this.note.trim(),
+            date: this.activeDay.date,
+          });
+          this.amount = ''; this.note = ''; this.currency = 'EUR';
+          this.save();
+        },
+        removeEntry(id) {
+          this.data.accounting = this.data.accounting.filter(e => e.id !== id);
+          this.save();
+        },
+
+        // ===== 设置 =====
+        importFile(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const obj = JSON.parse(reader.result);
+              if (!obj.itinerary || !obj.checklist) throw new Error('缺少 itinerary / checklist 字段');
+              // 兼容保留 accounting / budget / rates
+              this.data = Object.assign(JSON.parse(JSON.stringify(DEFAULT_DATA)), obj);
+              this.data.accounting = obj.accounting || [];
+              this.data.budget = obj.budget || null;
+              this.data.rates = obj.rates || this.data.rates;
+              this.data.tickets = obj.tickets || [];
+              this.data.bookings = obj.bookings || null;
+              this.activeDate = 0;
+              this.save();
+              alert('导入成功 · Imported OK');
+            } catch (err) {
+              alert('导入失败：' + err.message);
+            }
+            e.target.value = '';
+          };
+          reader.readAsText(file);
+        },
+        exportFile() {
+          const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'trip-data.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        restoreDefault() {
+          this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+          this.activeDate = 0;
+          this.save();
+        },
+      };
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

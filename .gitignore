@@ -1,0 +1,14 @@
+.idea
+*.iml
+.classpath
+.settings
+.project
+.tomcatplugin
+.trae
+*.pdf
+
+# 临时 / 中间产物（兜底，防止散落根目录）
+tmp_*
+*.copy.md
+*.bak
+.tmp/
