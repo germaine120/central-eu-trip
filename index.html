@@ -392,12 +392,22 @@
       <!-- 日期横向选择 -->
       <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 py-4 mt-1">
         <template x-for="(d, i) in data.itinerary" :key="d.date">
-          <button @click="ticketDate = i"
+          <button @click="ticketDate = i; ticketFilter='全部'"
                   class="shrink-0 px-3.5 py-2 rounded-2xl text-center transition active:scale-95"
-                  :class="ticketDate===i ? 'bg-accent dark:bg-accent-dark text-white shadow-card' : 'bg-white dark:bg-[#1c1c1e] text-gray-700 dark:text-gray-200 shadow-sm'">
+                  :class="ticketFilter==='全部' && ticketDate===i ? 'bg-accent dark:bg-accent-dark text-white shadow-card' : 'bg-white dark:bg-[#1c1c1e] text-gray-700 dark:text-gray-200 shadow-sm'">
             <div class="text-[13px] font-semibold leading-tight" x-text="d.day_zh"></div>
             <div class="text-[10px] opacity-80 mt-0.5" x-text="d.weekday_zh"></div>
           </button>
+        </template>
+      </div>
+
+      <!-- 分类筛选入口 -->
+      <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+        <template x-for="c in ticketCats" :key="c">
+          <button @click="ticketFilter = c"
+                  class="shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition active:scale-95 whitespace-nowrap"
+                  :class="ticketFilter===c ? 'bg-accent dark:bg-accent-dark text-white' : 'bg-black/5 dark:bg-white/10 text-gray-600 dark:text-gray-300'"
+                  x-text="c==='全部' ? '全部 All' : ({'酒店':'🏨 酒店','餐厅':'🍽️ 餐厅','景点':'🎟️ 景点','交通':'🚦 交通'}[c] || c)"></button>
         </template>
       </div>
 
@@ -406,31 +416,33 @@
           <!-- 凭证 PDF -->
           <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
             <div class="flex items-center justify-between mb-3">
-              <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500">凭证 PDF · Tickets</div>
+              <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500" x-text="ticketFilter==='全部' ? '当天凭证 · Tickets' : (ticketFilter + ' · 全部日期')"></div>
               <button @click="openTicketForm()" class="text-[12px] font-medium text-accent dark:text-accent-dark active:scale-95">＋ 新增</button>
             </div>
             <div class="space-y-2.5">
-              <template x-for="t in ticketsForDay" :key="t.id">
+              <template x-for="t in filteredTickets" :key="t.id">
                 <div class="flex items-center gap-2.5">
-                  <div class="shrink-0 w-10 h-10 rounded-full bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark flex items-center justify-center text-[17px]" x-text="t.category==='机票'?'✈️':t.category==='火车'?'🚄':t.category==='酒店'?'🏨':t.category==='门票'?'🎟️':'📄'"></div>
+                  <div class="shrink-0 w-10 h-10 rounded-full bg-accent/10 dark:bg-accent-dark/20 text-accent dark:text-accent-dark flex items-center justify-center text-[17px]" x-text="t.category==='酒店'?'🏨':t.category==='餐厅'?'🍽️':t.category==='景点'?'🎟️':t.category==='交通'?'🚦':'📄'"></div>
                   <div class="flex-1 min-w-0">
                     <div class="text-[14px] font-semibold truncate" x-text="t.title_zh"></div>
                     <div class="text-[11px] text-gray-400 dark:text-gray-500 truncate" x-text="(t.title_en||'') + (t.note ? ' · ' + t.note : '')"></div>
+                    <span class="inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-gray-500 dark:text-gray-400" x-text="t.dateRange ? t.dateRange.replace('..',' – ') : dayLabel(t.date)"></span>
                   </div>
-                  <a :href="t.file" target="_blank" rel="noopener"
-                     class="shrink-0 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 text-[12px] font-medium active:scale-90 transition">📂 打开</a>
+                  <button @click="openPdf(t)" :disabled="!(t.pdf||t.file)"
+                     class="shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium active:scale-90 transition disabled:opacity-40"
+                     :class="(t.pdf||t.file) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-black/5 dark:bg-white/10 text-gray-400'">📂 打开</button>
                   <button @click="openTicketForm(t)" class="shrink-0 w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-[14px] active:scale-90 transition" aria-label="编辑">✏️</button>
                   <button @click="deleteTicket(t.id)" class="shrink-0 w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90 transition" aria-label="删除">🗑️</button>
                 </div>
               </template>
-              <template x-if="ticketsForDay.length === 0">
-                <div class="text-[12px] text-gray-400 dark:text-gray-500 py-2">当天暂无凭证，点「＋ 新增」添加 PDF 路径</div>
+              <template x-if="filteredTickets.length === 0">
+                <div class="text-[12px] text-gray-400 dark:text-gray-500 py-2" x-text="ticketFilter==='全部' ? '当天暂无凭证，点「＋ 新增」添加' : '该分类暂无凭证'"></div>
               </template>
             </div>
           </div>
 
-          <!-- 预订提醒 -->
-          <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
+          <!-- 预订提醒（仅按天模式显示） -->
+          <div x-show="ticketFilter==='全部'" class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
             <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-3">预订提醒 · Bookings</div>
             <div class="space-y-4">
               <template x-for="grp in groupedBookings" :key="grp.priority">
@@ -479,7 +491,7 @@
             <div>
               <label class="text-[12px] text-gray-500 dark:text-gray-400">类别</label>
               <select x-model="editingTicket.category" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark">
-                <option>机票</option><option>火车</option><option>酒店</option><option>门票</option><option>其他</option>
+                <option>酒店</option><option>餐厅</option><option>景点</option><option>交通</option><option>其他</option>
               </select>
             </div>
             <div>
@@ -491,14 +503,20 @@
               <input x-model="editingTicket.title_en" placeholder="Hotel Rot Prague" class="w-full mt-1 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[15px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
             </div>
             <div>
-              <label class="text-[12px] text-gray-500 dark:text-gray-400">PDF 路径（相对 index.html）</label>
-              <div class="flex gap-2 mt-1">
-                <input x-model="editingTicket.file" placeholder="tickets/hotel-rot.pdf" class="flex-1 min-w-0 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[14px] outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark" />
-                <label class="shrink-0 px-3 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 text-[13px] active:scale-95 cursor-pointer">📁
+              <label class="text-[12px] text-gray-500 dark:text-gray-400">PDF 凭证（内嵌 · 离线可用）</label>
+              <div class="mt-1 space-y-2">
+                <template x-if="editingTicket.pdf">
+                  <div class="flex items-center gap-2 px-3 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[13px]">
+                    <span>✅ 已内嵌 PDF<span x-show="editingTicket._size" class="opacity-70" x-text="'（' + editingTicket._size + ' KB）'"></span></span>
+                    <button type="button" @click="editingTicket.pdf=''; editingTicket.file=''; editingTicket._size=0" class="ml-auto text-[12px] underline opacity-70">移除</button>
+                  </div>
+                </template>
+                <label class="block px-3 py-3 rounded-2xl bg-black/5 dark:bg-white/10 text-[14px] active:scale-95 cursor-pointer text-center">
+                  📁 选择 PDF 文件（自动内嵌进数据）
                   <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onTicketFile($event)" />
                 </label>
+                <p class="text-[11px] text-gray-400 dark:text-gray-500">选中的 PDF 会随数据一起保存，导入手机后离线也能看，无需单独传文件。</p>
               </div>
-              <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">把 PDF 放进 <span class="font-mono">tickets/</span> 文件夹，填 <span class="font-mono">tickets/文件名.pdf</span></p>
             </div>
             <div>
               <label class="text-[12px] text-gray-500 dark:text-gray-400">备注（可选）</label>
@@ -537,7 +555,7 @@
 
           <p class="mt-4 text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
             JSON 结构：<br />
-            { meta, rates:{EUR,CZK,HUF}, checklist:[{id,priority,text_zh,text_en,done}], itinerary:[{date,day_zh,day_en,weekday_zh,city_zh,city_en,route_zh,route_en,sights:[{name_zh,name_en,map}],food:[{name_zh,name_en}],transport_zh,transport_en,transports:[{type:'flight'|'train',depart,arrive,from,to,detail}],accommodation:{name_zh,name_en,map},planB_zh,planB_en}], accounting:[{id,amount,currency,cny,note,date}], bookings:{P1..P4:{title_zh,title_en,items:[{id,name_zh,name_en,date,why_zh,channel_zh,done}]}}, tickets:[{id,date,category:'机票'|'火车'|'酒店'|'门票'|'其他',title_zh,title_en,file:'tickets/xxx.pdf',note}], budget? }
+            { meta, rates:{EUR,CZK,HUF}, checklist:[{id,priority,text_zh,text_en,done}], itinerary:[{date,day_zh,day_en,weekday_zh,city_zh,city_en,route_zh,route_en,sights:[{name_zh,name_en,map}],food:[{name_zh,name_en}],transport_zh,transport_en,transports:[{type:'flight'|'train',depart,arrive,from,to,detail}],accommodation:{name_zh,name_en,map},planB_zh,planB_en}], accounting:[{id,amount,currency,cny,note,date}], bookings:{P1..P4:{title_zh,title_en,items:[{id,name_zh,name_en,date,why_zh,channel_zh,done}]}}, tickets:[{id,date,category:'酒店'|'餐厅'|'景点'|'交通'|'其他',title_zh,title_en,file?:'tickets/类别/xxx.pdf',pdf?:'data:application/pdf;base64,...',note}], budget? }
           </p>
         </div>
 
@@ -547,6 +565,17 @@
         </div>
       </div>
     </section>
+
+    <!-- ===================== PDF 全屏预览模态 ===================== -->
+    <div x-show="showPdf" x-transition.opacity
+         class="fixed inset-0 z-50 bg-black/95 flex flex-col"
+         style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
+      <div class="flex items-center justify-between px-4 py-3 text-white">
+        <button @click="closePdf()" class="text-[15px] font-medium active:scale-90">✕ 关闭</button>
+        <button @click="openPdfInSafari()" class="text-[14px] text-sky-300 active:scale-90">在 Safari 打开 ↗</button>
+      </div>
+      <iframe :src="previewPdf" x-show="previewPdf" class="flex-1 w-full bg-white"></iframe>
+    </div>
 
   </main>
 
@@ -580,7 +609,10 @@
           return JSON.parse(JSON.stringify(DEFAULT_DATA));
         })(),
         activeDate: 0,
+        showPdf: false,
+        previewPdf: '',
         ticketDate: 0,
+        ticketFilter: '全部',
         showTicketForm: false,
         editingTicket: null,
 
@@ -597,6 +629,31 @@
         get ticketsForDay() {
           const d = this.ticketDay ? this.ticketDay.date : null;
           return (this.data.tickets || []).filter(t => t.date === d);
+        },
+        get ticketCats() {
+          const set = new Set((this.data.tickets || []).map(t => t.category).filter(Boolean));
+          const order = ['酒店', '餐厅', '景点', '交通', '其他'];
+          const cats = [...set].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+          return ['全部', ...cats];
+        },
+        get filteredTickets() {
+          const all = this.data.tickets || [];
+          if (this.ticketFilter && this.ticketFilter !== '全部') {
+            return all.filter(t => t.category === this.ticketFilter)
+                      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+          }
+          const d = this.ticketDay ? this.ticketDay.date : null;
+          return all.filter(t => t.date === d || this.inRange(t.dateRange, d))
+                    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        },
+        inRange(range, d) {
+          if (!range) return false;
+          const parts = range.split('..');
+          return d >= parts[0] && d <= parts[1];
+        },
+        dayLabel(date) {
+          const d = (this.data.itinerary||[]).find(x => x.date === date);
+          return d ? d.day_zh : (date || '');
         },
         get groupedBookings() {
           const order = ['P1', 'P2', 'P3', 'P4'];
@@ -627,16 +684,23 @@
         openTicketForm(t) {
           this.editingTicket = t
             ? JSON.parse(JSON.stringify(t))
-            : { id: '', date: this.ticketDay ? this.ticketDay.date : '', category: '机票', title_zh: '', title_en: '', file: '', note: '' };
+            : { id: '', date: this.ticketDay ? this.ticketDay.date : '', category: '酒店', title_zh: '', title_en: '', file: '', pdf: '', _size: 0, note: '' };
           this.showTicketForm = true;
         },
         onTicketFile(e) {
           const f = e.target.files[0];
-          if (f) this.editingTicket.file = 'tickets/' + f.name;
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            this.editingTicket.pdf = reader.result;
+            this.editingTicket.file = '';
+            this.editingTicket._size = (f.size / 1024).toFixed(0);
+          };
+          reader.readAsDataURL(f);
         },
         saveTicket() {
           const t = this.editingTicket;
-          if (!t || !t.title_zh.trim() || !t.file.trim()) { alert('请填写标题与 PDF 路径'); return; }
+          if (!t || !t.title_zh.trim() || !(t.pdf || t.file)) { alert('请填写标题并选择 PDF 文件'); return; }
           if (!t.id) {
             t.id = 't' + Date.now();
             this.data.tickets = this.data.tickets || [];
@@ -653,6 +717,16 @@
           this.data.tickets = (this.data.tickets || []).filter(x => x.id !== id);
           this.save();
         },
+
+        pdfFor(t) { return (t && (t.pdf || t.file)) || ''; },
+        openPdf(t) {
+          const u = this.pdfFor(t);
+          if (!u) { alert('该票夹项还没有 PDF'); return; }
+          this.previewPdf = u;
+          this.showPdf = true;
+        },
+        closePdf() { this.showPdf = false; this.previewPdf = ''; },
+        openPdfInSafari() { if (this.previewPdf) window.open(this.previewPdf, '_blank'); },
 
         save() { localStorage.setItem('euroTripData', JSON.stringify(this.data)); },
 
