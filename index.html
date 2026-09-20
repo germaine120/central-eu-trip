@@ -291,24 +291,24 @@
           <div class="px-5 py-4 rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-card">
             <div class="text-[12px] font-semibold text-gray-400 dark:text-gray-500 mb-3">核心景点 · Sights</div>
             <div>
-              <template x-for="(s, si) in (activeDay.sights || [])" :key="s.name_en">
+              <template x-for="(s, si) in sightRows" :key="s.name_en">
                 <div class="pb-1">
                   <!-- 从上个地点到这里的交通方式与耗时 -->
-                  <template x-if="si > 0 && s.leg && s.leg.mode">
+                  <template x-if="si > 0 && s._leg">
                     <div class="flex items-center flex-wrap gap-1.5 pl-1 pt-2.5 pb-2 text-[11px] text-gray-400 dark:text-gray-500">
                       <span class="text-accent dark:text-accent-dark">↓</span>
-                      <span x-text="s.leg.mode"></span>
-                      <span x-text="'· 约 ' + s.leg.min + ' 分钟'"></span>
-                      <span x-show="s.leg.note" x-text="'· ' + s.leg.note"></span>
+                      <span x-text="s._leg.mode"></span>
+                      <span x-show="s._leg.min" x-text="'· 约 ' + s._leg.min + ' 分钟'"></span>
+                      <span x-show="s._leg.note" x-text="'· ' + s._leg.note"></span>
                     </div>
                   </template>
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex-1 min-w-0">
                       <div class="text-[15px] leading-snug" x-text="s.name_zh"></div>
                       <div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5" x-text="s.name_en"></div>
-                      <div x-show="s.intro_zh" class="text-[12px] text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed" x-text="s.intro_zh"></div>
-                      <div x-show="s.tips_zh" class="mt-1.5 flex gap-1.5 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-                        <span class="shrink-0">💡</span><span x-text="s.tips_zh"></span>
+                      <div x-show="s._intro" class="text-[12px] text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed" x-text="s._intro"></div>
+                      <div x-show="s._tips" class="mt-1.5 flex gap-1.5 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+                        <span class="shrink-0">💡</span><span x-text="s._tips"></span>
                       </div>
                     </div>
                     <a :href="mapUrl(s.map)" target="_blank" rel="noopener"
@@ -741,6 +741,14 @@
     // 导致关闭预览时文档无法被销毁（内存泄漏 + 未处理的 Promise rejection）。
     let _pdfDoc = null;
 
+    // ===== 内置景点简介 / 段间交通（离线兜底）=====
+    // 若导入的 trip-data.json 未含 intro_zh / tips_zh / leg（例如更早版本生成的数据），
+    // 自动回退到这份内置表，保证「核心地点简介」「注意事项」「景点间交通」始终可见。
+    // 内容与 build_final.js 的 SIGHT_INFO / SIGHT_LEGS 保持一致。
+    const BUILTIN_SIGHT_INFO = {"Oktoberfest Theresienwiese":{"intro":"慕尼黑啤酒节主会场，每年 9 月下旬至 10 月初举办，是全球规模最大的民间节庆。","tips":"午间外场人相对少；帐篷内需提前订位，大包过不了安检，别带行李箱。"},"Marienplatz & New Town Hall":{"intro":"慕尼黑老城的心脏，新市政厅钟楼每天 11:00 / 12:00（夏季 17:00 加场）有机械木偶钟表演。","tips":"整点前 10 分钟到，站广场偏南侧视野最好；登塔排队久，可放弃。"},"Prague Castle":{"intro":"世界最大的古城堡建筑群，含圣维特大教堂、旧皇宫、圣乔治大殿与黄金巷。","tips":"买 circuit B 联票；9 点开门即进最省时；教堂内禁用闪光灯；入口要安检排队。"},"St. Nicholas Church":{"intro":"布拉格巴洛克建筑代表作，穹顶壁画与水晶吊灯极为华丽。","tips":"常有音乐会在此举办，白天参观需另购票；台阶多，注意脚下。"},"Lennon Wall & Kampa Island":{"intro":"列侬墙是自由表达的涂鸦地标，坎帕岛则是伏尔塔瓦河支流间的安静绿洲。","tips":"墙面涂鸦随时被覆盖，想拍趁早；坎帕岛傍晚光线最好。"},"Letná Park":{"intro":"城堡北侧的高地公园，是俯瞰伏尔塔瓦河与多座桥梁的最佳机位之一。","tips":"啤酒花园先占座再点单；日落后风大，带件外套。"},"Charles Bridge":{"intro":"1357 年始建的查理大桥，两侧立有 30 尊圣像，连接老城与城堡区。","tips":"清晨 7 点前几乎无人；石板易滑，雨天小心；桥上小贩价格虚高。"},"Old Town Square":{"intro":"布拉格最古老的广场，天文钟、泰恩教堂与圣尼古拉教堂环伺四周。","tips":"天文钟 9:00-21:00 整点报时，提前 5 分钟占位；广场餐饮偏贵，往里走更划算。"},"Havel Market":{"intro":"老城里的传统集市，卖水果、提线木偶与波西米亚饰品。","tips":"记得砍价，一般能砍到标价 6-7 折；水果按公斤标价，看清单位。"},"Kafka / Dancing House":{"intro":"卡夫卡旋转头像雕塑与「跳舞的房子」，是新老布拉格的有趣对照。","tips":"旋转头像约每小时转一次；跳舞的房子是办公楼，只能看外观。"},"CK Castle view":{"intro":"Český Krumlov 城堡依山而建，跨过斗篷桥可俯瞰整个小镇的红瓦屋顶。","tips":"城堡内部需跟团讲解；观景平台人多，早上或傍晚更从容。"},"Painting Tower":{"intro":"彩绘塔是小镇地标，塔身彩绘用的是错觉画法，近看才发现是平面。","tips":"登塔楼梯窄且陡，别背大包；塔顶视野是全城最佳。"},"Vltava riverside":{"intro":"伏尔塔瓦河在 CK 形成一个近乎闭合的河湾，把老城环抱其中。","tips":"傍晚沿河散步最美；夏季蚊虫多，备驱蚊用品。"},"Hallstatt lake":{"intro":"萨尔茨卡默古特湖区小镇，世界文化遗产，湖光山色如明信片。","tips":"小镇很小，2-3 小时足够；避开 11:00-15:00 团客高峰；湖边禁飞无人机。"},"Postcard viewpoint":{"intro":"经典明信片机位，可拍到教堂尖塔、湖面与背后山峰的完整构图。","tips":"从镇中心步行约 15 分钟上坡；清晨顺光且游客最少。"},"Schafbergbahn":{"intro":"夏夫堡齿轨登山火车，单程约 35 分钟登顶 1783 米，可俯瞰七个湖泊。","tips":"旺季务必提前网上订票；山顶风大温差大，带厚外套；云雾天视野差。"},"Alpine Coaster":{"intro":"Strobl 的夏季旱地雪橇滑道，沿轨道俯冲，是湖区很受欢迎的亲子项目。","tips":"雨天暂停运营；有身高限制，小孩需成人陪同；可买单次或多次票。"},"Lake Wolfgang":{"intro":"奥地利最著名的湖泊之一，水色碧绿，四周群山环绕。","tips":"坐船游湖比开车沿湖更值；码头在 St. Wolfgang 镇中心。"},"Mirabell Palace":{"intro":"米拉贝尔宫及几何花园是《音乐之声》取景地，也是拍要塞全景的经典机位。","tips":"花园免费，清晨人少；从花园尽头回望要塞+大教堂构图最好。"},"Makartsteg":{"intro":"萨尔察赫河上的步行桥，栏杆挂满爱情锁，连接老城与对岸。","tips":"桥上看要塞日落极美；锁需自备，附近不一定有卖。"},"Getreidegasse":{"intro":"萨尔茨堡最热闹的老城商业街，莫扎特出生地就在 9 号楼。","tips":"铁艺招牌是特色，记得抬头看；莫扎特出生地需买票且排队较长。"},"Salzburg Cathedral":{"intro":"萨尔茨堡大教堂是巴洛克杰作，莫扎特曾在此受洗并任管风琴师。","tips":"内部免费但需保持安静；管风琴音乐会需另行购票。"},"Hohensalzburg Fortress":{"intro":"中欧保存最完整的大型城堡之一，乘缆车登顶可俯瞰全城与阿尔卑斯山。","tips":"缆车+城堡联票更划算；傍晚上山看日落，留意末班缆车时间。"},"Great Market Hall":{"intro":"布达佩斯最大的室内市场，一层卖食材香料，二层是手工艺与小吃摊。","tips":"二层可吃到 langos；周日不营业；辣椒粉认准「Édesnemes」甜味款。"},"St. Stephen’s Basilica":{"intro":"布达佩斯最大的教堂，登顶穹顶可 360° 俯瞰全城。","tips":"登顶分电梯与楼梯两种，楼梯便宜；音乐会常在一层举行。"},"Hungarian State Opera":{"intro":"匈牙利国家歌剧院，新文艺复兴风格，音响效果在欧洲名列前茅。","tips":"参观需跟导览团；演出票常提前售罄，着装稍正式。"},"Liberty Bridge":{"intro":"布达佩斯多瑙河上最短的桥，绿色铁塔在日落时格外上镜。","tips":"桥上可观盖勒特山与市场大厅；夏季有人坐桥栏，注意安全。"},"Fisherman’s Bastion":{"intro":"渔人堡的白色童话塔楼，是俯瞰多瑙河与国会大厦的最佳观景台。","tips":"下层免费、上层观景台收费；9 点前进几乎没人；日出光线最美。"},"Matthias Church":{"intro":"马加什教堂以彩色马赛克屋顶著称，历代匈牙利国王在此加冕。","tips":"与渔人堡联票更划算；内部光线暗，拍照需调高感光。"},"Chain Bridge":{"intro":"塞切尼链桥是布达佩斯第一座横跨多瑙河的永久桥梁，桥头狮像是标志。","tips":"步行过桥约 10 分钟；夜景灯光 22 点后可能关闭。"},"Hungarian Parliament":{"intro":"匈牙利国会大厦是欧洲最大的议会建筑之一，哥特复兴风格，夜景金碧辉煌。","tips":"参观必须预约跟团；拍全景最佳机位在对岸渔人堡或 2 路电车沿线。"},"Outlet":{"intro":"维也纳近郊的奥特莱斯（Parndorf 等），汇集众多品牌折扣店。","tips":"无车前往需坐专线巴士，班次有限先查时刻；非欧盟游客可退税，带好护照。"},"Schönbrunn Palace":{"intro":"哈布斯堡夏宫，共 1441 个房间，含花园、凯旋门与欧洲最古老的动物园。","tips":"门票需选时段，旺季提前订；从 Stranitzkygasse 门进可免上坡；花园免费。"},"Hofburg & Heldenplatz":{"intro":"霍夫堡宫殿群曾是哈布斯堡王朝冬宫，含茜茜公主博物馆与银器馆。","tips":"广场免费，博物馆需购票；霍夫堡与英雄广场是同一片区域。"},"National Library":{"intro":"奥地利国家图书馆的巴洛克大厅被誉为全球最美图书馆之一，穹顶壁画震撼。","tips":"门票约 €10；禁用闪光灯与三脚架；大厅内需保持安静。"},"Austrian National Library":{"intro":"奥地利国家图书馆的巴洛克大厅被誉为全球最美图书馆之一，穹顶壁画震撼。","tips":"门票约 €10；禁用闪光灯与三脚架；大厅内需保持安静。"},"Café Sacher":{"intro":"萨赫酒店咖啡馆，是「萨赫蛋糕」的正宗产地，与 Demel 常年打官司。","tips":"务必提前预约免排队；蛋糕偏甜，配黑咖啡或无糖奶油更顺口。"},"Musikverein":{"intro":"金色大厅是维也纳爱乐之友协会所在地，金色装饰与顶级声学闻名世界。","tips":"提前寄存外套（现金 1 欧/件）；着装整洁即可；演出中禁止拍照。"},"St. Stephen’s Cathedral":{"intro":"维也纳地标，哥特式南塔高 136 米，屋顶彩色瓦片拼出双头鹰图案。","tips":"南塔 343 级台阶可上，北塔有电梯；屋顶瓦片从远处看更完整。"},"Naschmarkt":{"intro":"维也纳最著名的露天市场，全长约 1.5 公里，卖香料、蔬果、奶酪与熟食。","tips":"周六有跳蚤市场；周日与周日下午不营业；海鲜摊可现点现吃。"}};
+    // 按「日期 → 数组（下标 = 当天第几个景点，0 为空）」组织
+    const BUILTIN_SIGHT_LEGS = {"2026-09-23":[null,{"mode":"U-Bahn 地铁 U4/U5","min":12,"note":"Theresienwiese → Marienplatz"}],"2026-09-24":[null,{"mode":"步行","min":8,"note":"沿 Nerudova 街下坡"},{"mode":"步行","min":6,"note":"小城广场 → 列侬墙"},{"mode":"电车 12/20 路","min":20,"note":"Malostranská → Chotkovy sady"}],"2026-09-25":[null,{"mode":"步行","min":8,"note":"过桥经 Karlova 街"},{"mode":"步行","min":3,"note":"老城广场东侧"},{"mode":"步行","min":15,"note":"沿 Národní 街向南"}],"2026-09-26":[null,{"mode":"步行","min":5,"note":"城堡庭院内"},{"mode":"步行","min":8,"note":"沿河岸步道"}],"2026-09-27":[null,{"mode":"步行","min":15,"note":"镇内小路向上坡走"}],"2026-09-28":[null,{"mode":"巴士 546 路","min":15,"note":"SchafbergBahn → Strobl"},{"mode":"巴士 546 路","min":15,"note":"Strobl → St. Wolfgang"}],"2026-09-29":[null,{"mode":"步行","min":8,"note":"过 Makartsteg 桥"},{"mode":"步行","min":3,"note":"桥南即粮食胡同"},{"mode":"步行","min":5,"note":"胡同南口 → 主教广场"},{"mode":"缆车 Festungsbahn","min":10,"note":"登山缆车"}],"2026-09-30":[null,{"mode":"地铁 M3/M1","min":15,"note":"Fővám tér → Bajcsy-Zsilinszky út"},{"mode":"步行","min":6,"note":"沿 Andrássy 大街"},{"mode":"地铁 M1 + 电车 2 路","min":18,"note":"返回多瑙河岸"}],"2026-10-01":[null,{"mode":"步行","min":2,"note":"同一片区域"},{"mode":"巴士 16 路","min":15,"note":"城堡区下山至链桥"},{"mode":"电车 2 路","min":12,"note":"沿多瑙河岸向北"}],"2026-10-03":[null,{"mode":"U4 地铁","min":20,"note":"Schönbrunn → Karlsplatz"},{"mode":"步行","min":5,"note":"霍夫堡内穿行"},{"mode":"步行","min":3,"note":"紧邻霍夫堡"},{"mode":"步行","min":10,"note":"经 Albertinaplatz"},{"mode":"步行","min":10,"note":"沿 Kärntner 街"}]};
+
     function app() {
       return {
         tab: 'itinerary',
@@ -785,6 +793,23 @@
 
         get activeDay() { return this.data.itinerary[this.activeDate] || null; },
 
+        // ===== 景点简介 / 注意事项 / 段间交通 =====
+        // 优先用导入数据里的字段；若缺失（例如导入的是更早版本生成的 trip-data.json），
+        // 回退到内置的 BUILTIN_SIGHT_INFO / BUILTIN_SIGHT_LEGS，保证这些内容始终可见。
+        get sightRows() {
+          const day = this.activeDay;
+          if (!day || !day.sights) return [];
+          const legs = BUILTIN_SIGHT_LEGS[day.date] || [];
+          return day.sights.map((s, si) => {
+            const b = BUILTIN_SIGHT_INFO[s && s.name_en] || {};
+            return Object.assign({}, s, {
+              _intro: s.intro_zh || b.intro || '',
+              _tips: s.tips_zh || b.tips || '',
+              _leg: (s.leg && s.leg.mode) ? s.leg : (legs[si] || null),
+            });
+          });
+        },
+
         // ===== 倒计时（只针对已预约的交通与餐厅；数据来自 build_final.js 生成的 data.agenda）=====
         // 把「当地墙上时间 + UTC 偏移」换算成绝对时刻。
         // 不能直接 new Date('2026-09-23T14:00')——那会按手机本地时区解析，
@@ -793,8 +818,48 @@
           if (!a || !a.at) return NaN;
           return new Date(a.at + (a.off || '+02:00')).getTime();
         },
+        // 数据里若有 build_final.js 生成的 agenda 就用它；
+        // 若没有（导入的是更早版本的 trip-data.json），就地推算，保证倒计时始终可用。
+        // 规则与 build_final.js 完全一致：交通取 transports 里时刻为 HH:MM 的段，
+        // 餐厅取票据 note 里的「预约 HH:MM」。
+        get agendaSource() {
+          const a = this.data.agenda;
+          if (Array.isArray(a) && a.length) return a;
+          const out = [];
+          const CN = /上海|SHA|浦东|PVG|北京|PEK/i;
+          for (const day of (this.data.itinerary || [])) {
+            for (const lg of (day.transports || [])) {
+              const t = String(lg.depart || '').trim();
+              if (!/^\d{1,2}:\d{2}$/.test(t)) continue;   // 「接驳」这类非确定时间跳过
+              const hm = t.split(':');
+              const from = lg.from || '';
+              out.push({
+                at: day.date + 'T' + String(hm[0]).padStart(2, '0') + ':' + hm[1],
+                off: CN.test(from + (lg.to || '')) ? '+08:00' : '+02:00',
+                kind: '交通',
+                zh: from + ' → ' + (lg.to || ''),
+                en: lg.detail || '',
+                place: from,
+              });
+            }
+          }
+          for (const tk of (this.data.tickets || [])) {
+            if (tk.category !== '餐厅' || !tk.date) continue;
+            const m = /预约\s*(\d{1,2}):(\d{2})/.exec(tk.note || '');
+            if (!m) continue;
+            out.push({
+              at: tk.date + 'T' + String(m[1]).padStart(2, '0') + ':' + m[2],
+              off: '+02:00',
+              kind: '餐厅',
+              zh: tk.title_zh,
+              en: tk.title_en || '',
+              place: '',
+            });
+          }
+          return out;
+        },
         get agendaList() {
-          return (this.data.agenda || []).slice().sort((a, b) => this._atMs(a) - this._atMs(b));
+          return this.agendaSource.slice().sort((a, b) => this._atMs(a) - this._atMs(b));
         },
         get nextAgenda() {
           const t = this.now;
