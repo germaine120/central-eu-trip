@@ -12,3 +12,7 @@ tmp_*
 *.copy.md
 *.bak
 .tmp/
+build_final.js
+trip-data.json
+# 本地备份（票据数据不得提交）
+.build-backup/
