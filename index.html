@@ -31,6 +31,9 @@
        与 visual viewport 的变化彻底解耦。 */
     .app-shell { height: 100vh; height: 100svh; height: 100dvh; overflow: hidden; }
     .app-main { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    /* 底栏是 fixed、脱离文档流，所以内容区要自己留出「栏高 + 安全区」的底部内边距，
+       否则最后一条内容会被栏压住。栏高约 64px（py-2 + 22px 图标 + 10px 文字），留 76px 稍宽松。 */
+    .tabbar-pad { padding-bottom: calc(env(safe-area-inset-bottom) + 76px); }
     /* 两行截断：票夹标题较长，单行省略会看不清 */
     .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     /* 倒计时数字等宽，避免每秒跳动 */
@@ -243,7 +246,7 @@
     </div>
   </header>
 
-  <main class="flex-1 min-h-0 overflow-y-auto app-main px-4 pb-6">
+  <main class="flex-1 min-h-0 overflow-y-auto app-main px-4 tabbar-pad">
 
     <!-- ===================== Tab: 购物 Shopping ===================== -->
     <section x-show="tab==='shopping'" x-transition.opacity>
@@ -1104,7 +1107,7 @@
   </main>
 
   <!-- ===================== 毛玻璃悬浮 Tab 栏 ===================== -->
-  <nav class="shrink-0 relative z-30
+  <nav class="fixed bottom-0 inset-x-0 z-30
               bg-white/80 dark:bg-black/70 backdrop-blur-xl border-t border-black/5 dark:border-white/10"
        style="padding-bottom: env(safe-area-inset-bottom);">
     <div class="flex items-center justify-around px-2 py-2 max-w-md mx-auto">
