@@ -7,9 +7,16 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="奥捷匈漫游记" />
-  <meta name="app-build" content="v4.5 · 2026-09-21 17:23" />
-  <link rel="apple-touch-icon" href="icon.png" />
-  <link rel="icon" type="image/png" href="icon.png" />
+  <meta name="app-build" content="v4.6 · 2026-09-22 08:51" />
+  <!-- 图标：iOS 用 apple-touch-icon（180×180 是 iOS 首选尺寸），浏览器标签页与 Android 用 192/512。
+       ⚠️ 图标换过内容时**必须同时换文件名**：iOS 与各浏览器都按 URL 缓存图标，连"取不到"这个失败
+       结果也会被缓存；而主屏图标是「添加到主屏幕」那一刻拍下的快照，之后不会再更新。
+       历史教训：icon.png 的内容在 2026-09-20 换过一次但文件名没变，于是主屏图标长期不对。
+       所以这里刻意用带尺寸的新文件名，并在 manifest.json 里重复声明一遍。 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+  <link rel="manifest" href="manifest.json" />
   <title>奥捷匈漫游记 · 12日时光轨迹</title>
 
   <!-- 视口实测：把「真实可用高度」写成 --app-h，供 .app-shell 使用。

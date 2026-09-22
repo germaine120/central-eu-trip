@@ -1,0 +1,16 @@
+{
+  "name": "奥捷匈漫游记 · 12日时光轨迹",
+  "short_name": "奥捷匈漫游记",
+  "description": "奥捷匈 12 日行程 · 票夹 · 购物 · 记账，完全离线可用",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f2f8",
+  "theme_color": "#f3f2f8",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}
